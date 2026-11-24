@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberGraph — Cybersecurity Knowledge Graph on Relate</title>
+<meta name="description" content="A cybersecurity knowledge graph (CVE → CWE → CAPEC → MITRE ATT&CK) running on Relate, Neo4j's embedded graph database, compiled to WebAssembly. No server, no account.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230d1117'/%3E%3Ctext x='8' y='12' font-size='11' text-anchor='middle' fill='%2358a6ff'%3E%E2%97%86%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>CyberGraph</h1>
+  <p class="tagline">How vulnerabilities, weaknesses, attack patterns and attacker techniques connect — queried live on a real graph database in your browser.</p>
+  <p id="status" class="status">Loading Relate (WebAssembly)…</p>
+</header>
+
+<main>
+  <section class="card" id="honest-note">
+    <h2>What this is — honestly</h2>
+    <p>This page runs the <strong>real Relate engine v1.2.0</strong> (Neo4j's embedded graph database,
+    <a href="https://github.com/relatedb/relate">relatedb/relate</a>, Apache-2.0), compiled to WebAssembly.
+    Every query below executes as Cypher inside that engine — there is no fake graph layer and no
+    hosted Neo4j/Aura instance. The graph is seeded from <code>seed.cypher</code> into an in-memory store
+    when the page loads. The same seed is stored durably as a single-file Relate store at
+    <code>store/cybergraph.rl</code> in the repo — open it with the Relate CLI or Python and inspect it.</p>
+    <p class="dim">Free solo build: no server, no account, no tracking, works offline once loaded.
+    Nodes you add in the form below live only in this browser session; the committed store is unchanged.</p>
+  </section>
+
+  <section class="card">
+    <h2>Graph at a glance</h2>
+    <div id="stats" class="stats">—</div>
+    <div class="legend" id="legend"></div>
+    <svg id="graph" viewBox="0 0 960 620" role="img" aria-label="Knowledge graph visualisation"></svg>
+    <p class="dim">Drag nodes to rearrange. Click a node for details and its neighbours.</p>
+    <div id="details" class="details"><p class="dim">Click any node to see its properties and neighbours.</p></div>
+  </section>
+
+  <section class="card">
+    <h2>Find a path between two nodes</h2>
+    <p>Real Cypher <code>shortestPath</code> against the Relate engine — e.g. how is the xz backdoor
+    connected to Log4Shell?</p>
+    <div class="row">
+      <label>From <select id="path-from"></select></label>
+      <label>To <select id="path-to"></select></label>
+      <button id="path-run" type="button">Find path</button>
+    </div>
+    <div id="path-result" class="result"><p class="dim">No path searched yet.</p></div>
+  </section>
+
+  <section class="card">
+    <h2>Run Cypher</h2>
+    <p>Type any read query — it runs against the live Relate store in this page. Writes
+    (<code>CREATE</code> / <code>MERGE</code>) work too, for this session only.</p>
+    <textarea id="cypher" rows="4" spellcheck="false">MATCH (v:Vulnerability) RETURN v.id AS cve, v.name AS name, v.cvss AS cvss ORDER BY v.cvss DESC</textarea>
+    <div class="row">
+      <button id="cypher-run" type="button">Run query</button>
+      <button id="cypher-clear" type="button" class="ghost">Clear</button>
+    </div>
+    <div class="chips" id="examples"></div>
+    <div id="cypher-result" class="result"><p class="dim">No query run yet.</p></div>
+  </section>
+
+  <section class="card">
+    <h2>Add a node (this session only)</h2>
+    <div class="row">
+      <label>Type
+        <select id="add-label">
+          <option>Vulnerability</option><option>Weakness</option><option>AttackPattern</option>
+          <option>Technique</option><option>Product</option>
+        </select>
+      </label>
+      <label>ID <input id="add-id" placeholder="e.g. CVE-2024-12345" size="22"></label>
+      <label>Name <input id="add-name" placeholder="e.g. Example flaw" size="26"></label>
+      <button id="add-run" type="button">Add node</button>
+    </div>
+    <p id="add-result" class="dim">Creates the node with real Cypher in the in-memory Relate store.</p>
+  </section>
+
+  <section class="card">
+    <h2>Data &amp; provenance</h2>
+    <p>34 nodes, 39 relationships, hand-written for this project from public knowledge:
+    8 CVEs, 8 CWEs, 6 CAPEC attack patterns, 6 MITRE ATT&amp;CK techniques, 6 products.
+    Summaries are simplified and educational — verify any fact against
+    <a href="https://nvd.nist.gov/">NVD</a>, <a href="https://cwe.mitre.org/">CWE</a>,
+    <a href="https://capec.mitre.org/">CAPEC</a> or <a href="https://attack.mitre.org/">MITRE ATT&amp;CK</a>
+    before relying on it. The full seed is <code>seed.cypher</code> in the repo.</p>
+    <p>Relationships: <code>Vulnerability —HAS_WEAKNESS→ Weakness</code>,
+    <code>AttackPattern —EXPLOITS→ Weakness</code>,
+    <code>Technique —USES→ AttackPattern</code>,
+    <code>Technique —TARGETS→ Vulnerability</code>,
+    <code>Vulnerability —AFFECTS→ Product</code>.</p>
+    <p>Reproduce the store: <code>pip install relate-db &amp;&amp; python scripts/seed_store.py</code>,
+    then <code>relate --database ./store/cybergraph.rl --read-only "MATCH (n) RETURN count(n)"</code>.</p>
+  </section>
+</main>
+
+<footer>
+  <p>CyberGraph by Mohd Raja (devilking7x) — Relate by Neo4j Hackathon entry.
+  Built with Relate 1.2.0 (WASM), plain HTML/CSS/JS. No server, no tracking.</p>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
